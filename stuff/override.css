@@ -1,0 +1,15 @@
+.nohighlight {
+    background: rgb(35, 35, 35);
+}
+
+.reveal pre {
+    margin: auto;
+    font-size: 0.7em;
+    width: 100%;
+}
+
+.reveal pre code {
+    max-height: 700px;
+}
+
+em { color: red;font-style: normal; }
