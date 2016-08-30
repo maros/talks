@@ -1,0 +1,192 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+         <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                <p><h2>How to build a simple worker script</h2></p>
+                <p class="fragment">with minimal effort and SLOC</p>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+#!/usr/local/bin/gh-env perl
+use GH::Runner ('Geizhals::Importer::Amazon::ImageGrabber', 'amazon_');
+                        </code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+package Geizhals::Importer::Amazon::ImageGrabber;
+
+use Moose;
+with qw(MooseX::Getopt);
+
+use namespace::autoclean;
+use GH::Init qw($log);
+
+sub process {
+    my ($self) = @_;
+    foreach my $img ($self->images_todo) {
+        $self->image_grab($img);
+    }
+}
+__PACKAGE__->meta->make_immutable();
+                        </code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+has 'retries' => (
+    is              => 'rw',
+    isa             => 'Int',
+    documentation   => 'Number of HTTP retries',
+    default         => 2,
+);
+
+has 'internal_stuff' => (
+    is              => 'rw',
+    traits          => ['NoGetopt'],
+);
+</code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="nohighlight">
+usage: image_grabber.pl [-?h] [long options...]
+    -h -? --usage --help    Prints this usage information.
+    --retries INT           Number of retries                
+</code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+use Moose;
+with qw(MooseX::Getopt
+    GH::Role::Attrib::GHDBI
+    GH::Role::Attrib::Country
+    GH::Role::Attrib::Config
+    GH::Role::Attrib::Metrics
+    GH::Role::LogProcessCalls);
+</code></pre>
+                </section>
+				<section>
+						<h3>Parallelisation</h3>
+				</section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+with qw(...
+    GH::Role::ParallelWorker
+    GH::Role::LogProcessCalls); # order does matter
+
+sub process {
+    my ($self,$img) = @_;
+    $self->image_grab($img);
+    return 1; # Important!
+}
+
+sub get_runargs {
+    my ($self,$i) = @_;
+    return $self->get_image_todo($i); # get n-th image
+}
+</code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+with qw(...
+     GH::Role::ParallelQueueWorker); # order still does matter
+
+sub process { ... }
+
+sub get_job {
+    my ($self) = @_;
+    return $self->get_image_from_queue();
+}
+    
+sub success_job {}
+
+sub fail_job {
+    my ($self,$job,$return) = @_;
+    $self->add_image_to_queue($img);
+}
+</code></pre>
+                </section>
+                <section>
+                    <ul>
+                        <li>Signal handling (SIGINT, SIGHUP, SIGTERM)</li>
+						<li>Restart on code changes</li>
+						<li>Init, cleanup callbacks</li>
+						<li>Set no. of workers via '--workers #' option</li>
+						<li>Single process mode '--worker 0' (mimic Parallel::ForkManager)</li>
+                    </ul>
+                </section>
+				<section>
+						<h3>Locking</h3>
+				</section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+with qw(...
+    GH::Role::MutexProcess); # mind the order
+
+sub process { ... }
+
+sub mutex_db {
+    return 'kalidb';
+}
+
+sub mutex_name {
+    my ($self,$job) = @_;
+    # calc mutex name based on $job
+}
+</code></pre>
+                </section>
+				<section>
+						<h3>Limiting</h3>
+				</section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+with qw(...
+    GH::Role::RuntimeLimit); # order is quintessential
+    # or GH::Role::RuntimeAlarm - for clock time based alarms
+
+sub process {
+    ... # Will die if it runs into cpu-time limits
+}
+
+sub limit_cpu {
+    return 22;
+}
+</code></pre>
+                </section>
+				<section>
+						<h3>Own extenstions</h3>
+				</section>
+				<section>
+                    <ul>
+                        <li>Moose roles in GH::Role</li>
+						<li>Reusable attributes go into GH::Role::Attrib (eg. GH::Role::Attrib::Country)</li>
+						<li>Use NoGetopt traits to declare internal attributes</li>
+                    </ul>
+		            <pre><code data-trim data-noescape class="pl">
+around 'process' => sub {
+    my ($orig,$self,@args) = @_;
+    return $self->$orig(@args); # list vs. scalar context!
+};
+</code></pre></li>
+
+				</section>
+
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>    
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>

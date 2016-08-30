@@ -1,0 +1,145 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+         <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                <h2>Serialisation Formats Compared</h2>
+                </section>
+                <section>
+                <p><ul>
+				   <li class="fragment">Sereal</li>
+				   <li class="fragment">JSON</li>
+				   <li class="fragment">Google Protocol Buffers</li>
+				   <li class="fragment">Storable, cdb, ...</li>
+				</ul></p>
+                </section>
+                <section>
+                <p><ul>
+				   <li class="fragment">"Schema-less" vs. "schema-ful"</li>
+				   <li class="fragment">Binary vs. human readable</li>
+				</ul></p>
+                </section>
+				<section>
+				<h3>Sereal</h3>
+				<ul>
+				   <li>Fast, secure and small data size</li>
+				</ul>
+				</section>
+				<section>
+				<h3>JSON</h3>
+				<ul>
+				   <li>Use Cpanel::JSON::XS</li>
+				   <li>Use JSON::PP::Boolean to express boolean values</li>
+				   <li>Watch out for string vs. numeric context when creating JSON for non-Perl consumers</li>
+				   <li>Optional JSON schema (JSON::TinyValidatorV4)</li>
+				</ul>
+				</section>
+				<section>
+				<h3>Google Protocol Buffers</h3>
+				<ul>
+				   <li>Needs schema. Data cannot be read without schema file</li>
+				   <li>Google::ProtocolBuffers::Dynamic creates classes out of schema files</li>
+				   <li>Geizhals::Importer::Schema wraps and extends schema classes: ENUMs as strings, new_from_hashref, update_from_hashref</li>
+				   <li>Augument with own classes: Add custom methods</li>
+				</ul>
+				</section>
+                <section>
+                        <pre><code data-trim data-noescape class="nohighlight">
+syntax = "proto2";
+package geizhals;
+
+// Multi offer import
+message Import {
+  message Merchant {
+    optional string id = 1;
+    required string name = 2;
+  }
+
+  enum ImportTypeEnum {
+    FULL = 0;
+    DELTA = 1;
+  }
+  optional ImportTypeEnum type = 1 [default=FULL];
+  optional Merchant merchant = 2;
+  optional string identifier = 3 [default="COMPLETE"];
+  repeated ProductOffer product_offer = 4;
+}
+</code></pre>
+                </section>
+                <section>
+                        <pre><code data-trim data-noescape class="pl">
+my $payment = Geizhals::Importer::Schema::ProductOffer::Payment->new_from_hashref({
+    country => ['AT','CH','NL',1],
+    info    => 'Zone 1. Nachname 5€, Kreditkarte & PayPal 1€',
+    method    => [
+        { method => 3, cost => 5 },
+        { method => 'CREDITCARD', cost => 1 },
+        { method => 'PayPal', cost => 1 }, # lowercase
+        { method => 'INVOICE', available => 0 },
+    ]
+});
+say $payment->get_info();
+</code></pre>
+                </section>
+				<section>
+				<h3>Other</h3>
+				<ul>
+				   <li>Storable reference serialisation is not secure</li>
+				   <li>Not guaranteed to be backward/forward compatible</li>
+				   <li>Do not use anymore</li>
+				</ul>
+				</section>
+				<section>
+				<h3>Comparison</h3>
+                <table>
+				  <thead>
+                    <tr>
+                      <th>Format</th>
+					  <th>Runtime Real</th>
+					  <th>File size</th>
+					</tr>
+				  </thead>
+				  <tbody>
+                    <tr>
+					  <td>ProtoBuf</td>
+					  <td>0.49s</td>
+					  <td>42MB</td>
+				    </tr>
+                    <tr>
+					  <td>Sereal</td>
+					  <td>0.34s</td>
+					  <td>42MB</td>
+				    </tr>
+                    <tr>
+					  <td>Cpanel::JSON::XS</td>
+					  <td>0.44s</td>
+					  <td>56MB</td>
+					</tr>
+                    <tr>
+					  <td>Cpanel::JSON::XS + JSON::TinyValidatorV4|</td>
+					  <td>3.18s</td>
+					  <td>56MB</td>
+					</tr>
+				  </tbody>
+				</table>				
+				</section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>    
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>

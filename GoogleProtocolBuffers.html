@@ -1,0 +1,341 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+        <link rel="stylesheet" href="stuff/override.css">
+		<meta charset="UTF-8">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                <h2>Google Protocol Buffers</h2>
+				<h2 class="fragment"><span style="color:red">♥</span> Perl</h2>
+                </section>
+                <section data-transition="fade-out">
+                “Protocol buffers are Google's language-neutral, platform-neutral, extensible mechanism for serializing structured data – think XML, but smaller, faster, and simpler.”
+                </section>
+                <section data-transition="fade-in">
+                “Protocol buffers are Google's language-neutral, platform-neutral, extensible mechanism for serializing structured data – think <strike style="color: red">XML</strike> JSON, but with enforced schema, and smaller <strike style="color: red">faster, and simpler</strike>.”
+                </section>
+                <section>
+				<h2>Key features</h2>
+                <p><ul>
+				   <li>Needs schema</li>
+				   <li>Binary serialisation</li>
+				   <li>Generates classes from schema</li>
+				   <li>Update schema without breaking code</li>
+				</ul></p>
+                </section>
+				<section>
+				<h3>Schema definition</h3>
+				<p><ul>
+				   <li>Scalars (float, int[32,64], bool, string, bytes)</li>
+				   <li>Objects (aka messages)</li>
+				   <li>Enums</li>
+				   <li>Hashes (aka maps)</li>
+				   <li>Arrays (aka repeated)</li>
+				</ul></p>
+				</section>
+				<section>
+				<h3>Schema definition</h3>
+				<p><ul>
+				   <li>required vs. optional</li>
+				   <li>default values</li>
+				   <li>alternative fields (aka oneof)</li>
+				   <li>Extensions</li>
+				   <li>Packages</li>
+				   <li>(RPC services)</li>
+				</ul></p>
+				</section>
+
+				<section>
+				<pre>
+<code data-trim data-noescape class="protobuf">
+syntax = "proto2";
+package geizhals;
+
+message ProductOffer {
+  // definition goes here
+}
+</code></pre>
+				</section>
+				<section>
+				<pre>
+<code data-trim data-noescape class="protobuf">
+enum CurrencyEnum {
+    EUR = 0;
+    PLN = 1;
+    GBP = 2;
+}
+required string name = 1;  // Name of the product
+required Price price = 2;
+optional string deeplink = 3;
+repeated string image = 4;
+
+message Price {
+    required double price = 1;
+    optional CurrencyEnum currency = 2 [default=EUR];
+}
+</code></pre>
+				</section>
+				<section>
+				<h3>Perl bindings</h3>
+				<ul>
+				   <li>Google::ProtocolBuffers</li>
+				   <li>protobuf-perl (not on CPAN)</li>
+				   <li>Google::ProtocolBuffers::Dynamic</li>
+				</ul>
+				</section>
+				<section>
+				<h3>Google::ProtocolBuffers::Dynamic</h3>
+				<ul>
+				   <li>Fast</li>
+				   <li>Uses libproto c++ library</li>
+				   <li>Introspection</li>
+				   <li class="fragment">Hard to install</li>
+				</ul>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $dynamic = Google::ProtocolBuffers::Dynamic->new();
+$dynamic->load_string("product_offer.proto","/opt/gh/proto");
+$dynamic->map({
+    package             => 'geizhals',
+    prefix              => 'GH::Schema',
+    explicit_defaults   => 0,
+});
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $offer = GH::Schema::ProductOffer->new();
+$offer->set_name('Cat End Pencil Sharpener');
+$offer->encode(); <span class="fragment"># KABOOOM
+# Serialization failed: Missing required field 'geizhals.ProductOffer.price'
+</span>
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+$offer->set_price(GH::Schema::ProductOffer::Price->new(
+    {
+        price => 22.1,
+        currency => GH::Schema::ProductOffer::Currency::EUR,
+    }
+));
+$offer->encode(); <span class="fragment"># success!</span>
+</code></pre>
+				</section>
+				<section>
+				<ul>
+				   <li>Tedious to update (set_x, set_y, set_z)</li>
+				   <li>Tedious to create nested objects</li> 
+				   <li>Enums only by index or constant</li>
+				</ul>
+				</section>
+				<section>
+				<h3>Introspection to the rescue!</h3>
+				<ul>
+				   <li>Introspect classes on init</li>
+				   <li>Install helper methods (ie for enums)</li>
+				   <li>Wrap setter to handle enums by name</li>
+				   <li>Wrap setter to accept objects as hashrefs</li>
+				   <li>Add own methods to generated classes</li>
+				</ul>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $md = GH::Schema::ProductOffer->message_descriptor();
+foreach my $fd (@{$md->fields}) {
+    ...
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $enum_type  = $fd->enum_type;
+my $name       = $fd->name;
+my $setter     = 'set_'.$name;
+my $setter_ref = \&{$package.'::'.$setter};
+if ($enum_type) {
+    *{$package.'::'.$setter} = sub {
+        my ($self,$value) = @_;
+        return $setter_ref->(
+            $self,
+            _build_enum_value($enum_type,$value)
+        );
+    };
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $enum_type  = $fd->enum_type;
+my $name       = $fd->name;
+my $setter     = 'set_'.$name;
+if ($enum_type) {
+    *{$package.'::'.$setter.'_raw'} = \&{$package.'::'.$setter};
+    eval('sub '.$package.'::'.$setter.' {
+        my $self = shift;
+        my $value = shift;
+        $self->'.$setter.'_raw(_build_enum_value($enum_type,$value));
+    }');
+}
+</code></pre>
+				</section>
+				<section>
+				<h3>Repeated fields</h3>
+				<ul>
+				   <li>adder</li>
+				   <li>list getter/setter</li>
+				   <li>element getter/setter by index</li>
+				</ul>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my $mesage_type = $fd->message_type;
+if ($message_type) {
+    my $msg_package = _message_type_to_package($mesage_type);
+    *{$package.'::'.$setter} = sub {
+        my ($self,$value) = @_;
+        if (ref($value) eq 'HASH') {
+            $value = $msg_package->new_from_hashref($value);
+        }
+        return $original_setter->($self,$value);
+    };
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub new_from_hashref {
+    my ($class,$data) = @_;
+    my $md = $class->message_descriptor;
+    my $built = {};
+    foreach my $key (keys %{$data}) {
+        my $fd = $md->find_field_by_name($key);
+        $built->{$key} = _build_value($fd,$data->{$key});
+    }
+    return $class->new($built);
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub _build_value {
+    my ($fd,$value) = @_;
+    if ($fd->is_repeated && ref($value) eq 'ARRAY') {
+        return [ map { _build_value($fd,$_) } @{$value} ];
+    } elsif ($fd->is_map && ref($value) eq 'HASH') {
+        return $value;
+    } elsif ($fd->is_message) {
+        # new object via new_from_hashref
+    } else {
+        return _build_primitive($fd,$value);
+    }
+}
+</code></pre>
+				</section>
+				<section>
+				<h3>Maps</h3>
+				<ul>
+				   <li>Supported in protocol buffers v3</li>
+				   <li>Maps to hashes with arbitrary keys</li>
+				   <li>Hack to use maps in v2</li>
+				   <li>Internally strored as arrays of key/value pairs</li>
+				</ul>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="protobuf">
+// v3
+map&lt;string, integer&gt; mymap = 7;
+
+// v2
+MymapEntry mymap = 7;
+message MymapEntry {
+    optional string key = 1;
+    optional integer value = 2;
+}
+</code>
+<code data-trim data-noescape class="perl">
+$dynamic->map_message(
+   "geizhals.ProductOffer.MymapEntry",
+   "GH::Schema::ProductOffer::MymapEntry",
+   { implicit_maps => 1, package => 'geizhals' }
+);
+</code></pre>
+				</section>
+				<section>
+				<h3>Comparison Encoder 25k offers</h3>
+                <table style="color: white">
+				  <thead>
+                    <tr>
+                      <th>Format</th>
+					  <th>Runtime Real</th>
+					  <th>File size</th>
+					</tr>
+				  </thead>
+				  <tbody>
+                    <tr>
+					  <td>ProtoBuf</td>
+					  <td>0.49s</td>
+					  <td>42MB</td>
+				    </tr>
+                    <tr>
+					  <td>Sereal</td>
+					  <td>0.34s</td>
+					  <td>42MB</td>
+				    </tr>
+                    <tr>
+					  <td>Cpanel::JSON::XS</td>
+					  <td>0.44s</td>
+					  <td>56MB</td>
+					</tr>
+                    <tr>
+					  <td>Cpanel::JSON::XS + JSON::TinyValidatorV4</td>
+					  <td>3.18s</td>
+					  <td>56MB</td>
+					</tr>
+				  </tbody>
+				</table>				
+				</section>
+                <section>
+                <h3>Encoder</h3>
+                <pre>
+                 Rate protobuf_pp      sereal        json    protobuf
+protobuf_pp   96376/s          --        -91%        -92%        -94%
+sereal      1037900/s        977%          --        -13%        -38%
+json        1194348/s       1139%         15%          --        -29%
+protobuf    1683494/s       1647%         62%         41%          --
+</pre>
+                </section>
+                <section>
+                <h3>Decoder</h3>
+                <pre>
+                 Rate protobuf_pp        json    protobuf      sereal
+protobuf_pp   63015/s          --        -84%        -92%        -94%
+json         386059/s        513%          --        -53%        -62%
+protobuf     819199/s       1200%        112%          --        -19%
+sereal      1008246/s       1500%        161%         23%          --
+</pre>
+                </section>
+                <section>
+                <img src="media/CatEndSharpener.png">
+                </section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>    
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>

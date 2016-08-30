@@ -1,0 +1,324 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+		<link rel="stylesheet" href="stuff/override.css">
+		<meta charset="UTF-8">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                <h2>The Art of Moose Meta Programming</h2>
+                </section>
+				<section>
+		        <ul>
+				  <li><em>M</em>akes <em>O</em>bject <em>O</em>rientation <em>S</em>o <em>E</em>asy</li>
+				  <li class="fragment"><em>M</em>assive <em>O</em>bject-<em>O</em>riented <em>S</em>tacktrace <em>E</em>mitter</li>
+				  <li class="fragment"><em>M</em>oo, <em>O</em>nly <em>O</em>verengineered, <em>S</em>low, and <em>E</em>xecrable</li>
+				  <li class="fragment"><strong><em>M</em>eta <em>O</em>bject <em>O</em>rientation <em>S</em>yntax <em>E</em>xtensions</strong></li>
+				</ul>
+                </section>
+				<section>
+				<ul>
+  				   <li>Create and alter classes on the fly (eg. Mock)</li>
+				   <li>Add/alter methods to/of a single object (traits)</li>
+				   <li>Syntax extensions (DSL)</li>
+				   <li>Alter the way Moose itself works</li>
+				   <li>Separate data from metadata</li>
+				   <li>...</li>
+				</ul>
+				</section>
+				<section>
+				<h3>Examples</h3>
+				<ul>
+                   <li>Config file ORM + REST API</li>
+				   <li>MooseX-App</li><D-+>
+				   <li>Tagging attributes/classes</li>
+				</ul>
+				</section>
+				<section>
+				<h2>Let's build a simple DB ORM</h2>
+				</section>
+				<section>
+				<h3>What do we need</h3>
+				<ul>
+				   <li>Link a class to a table</li>
+				   <li>Link an attribute to a column</li>
+				   <li>Define relations between classes/tables</li>
+				   <li>Inflators/deflators</li>
+				</ul> 
+				</section>
+				<section>
+				<h3>Bicycle.pm tour log</h3>
+				<ul>
+				   <li>Monger</li>
+				   <li>Bicylce</li>
+				   <li>Tour</li>				
+				</ul> 
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Monger;
+use BicyclePm::ORM::Meta::Class::Table;
+use Moose -traits => 'BicyclePm::ORM::Meta::Class::Table';
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+# before
+say BicyclePm::DB::Monger->meta;
+# Moose::Meta::Class=HASH(0x0000affeeffe0000)
+
+# after
+say BicyclePm::DB::Monger->meta;
+# Moose::Meta::Class::__ANON__::SERIAL::1=HASH(0xdeadbeeffaadbaba)
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Meta::Class::Table;
+use Moose::Role;
+
+has 'orm_table' => (
+    is   => 'rw',
+    isa  => 'Str',
+);
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+BicyclePm::DB::Monger->meta->orm_table('monger');
+</code></pre>
+				</section>
+				<section>
+				<h3>Problems</h3>
+				<ul>
+				   <li>orm_table attribute is not readonly</li>
+				   <li>Ugly syntax</li>
+				   <li>Cannot make attribute required</li>
+				   <li class="fragment">Moose::Exporter to the rescue!</li>
+				</ul>
+				</section>
+				<section>
+				<h3>MooseX::Exporter</h3>
+				<ul>
+				   <li>exports Moose itself</li>
+				   <li>... or parts of it</li>
+				   <li>Installs three functions: import, unimport, init_meta</li>
+				   <li>Create your own custom Moose</li>
+				</ul>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Monger;
+use BicyclePm::ORM ( table => 'monger' );
+</span>
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicylcePm::ORM;
+
+use Moose qw();
+use Moose::Exporter;
+my ($IMPORT,$UNIMPORT) = Moose::Exporter->build_import_methods(
+    also                => [ 'Moose' ],
+    install             => [ 'unimport', 'init_meta' ],
+);
+</span>
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+my %MAPPED_CLASSES;
+sub import {
+    my ($class,%args) = @_;
+    my ($caller_class) = caller();
+    $MAPPED_CLASSES{$caller_class} = \%args; 
+    return $class->$IMPORT( { into => $caller_class } );
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub init_meta {
+    my ($class,%args) = @_;
+    my $for_class = $args{for_class};
+    Moose->init_meta( %args );
+    Moose::Util::MetaRole::apply_metaroles(
+        for             => $for_class,
+        class_metaroles => {
+            class               => [
+                'BicyclePm::ORM::Meta::Class::Table',
+            ],
+        },
+    );
+    $meta = $for_class->meta;
+    $meta->orm_table($MAPPED_CLASSES{$for_class}{table});
+    return $meta;
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub init_meta {
+    ...
+    $meta
+        ->meta
+        ->find_attribute_by_name('orm_table')
+        ->set_value($meta,$MAPPED_CLASSES{$for_class}{table});
+    return $meta;
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub init_meta {
+    ...
+    $meta         = $for_class->meta;
+    my $params    = $MAPPED_CLASSES{$for_class};
+    my $meta_meta = $meta->meta;
+    foreach my $key (keys %{$params}) {
+        $meta_meta
+            ->find_attribute_by_name('orm_'.$key)
+            ->set_value($meta,$params->{$key});
+    }
+
+    foreach my $attribute ($meta_meta->get_all_attributes) {
+        if ($attribute->DOES('LateRequired')
+            && ! $attribute->has_value($meta)) {
+            Moose->throw_error(sprintf(
+                'Attribute %s is missing in %s',
+                $attribute->name,
+                $for_class
+            ));
+        }
+    }
+    ...
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Meta::Attribute::LateRequired {
+    use Moose::Role;
+};
+
+package Moose::Meta::Attribute::Custom::Trait::LateRequired {
+    sub register_implementation {
+        return 'BicyclePm::ORM::Meta::Attribute::LateRequired';
+    }
+};
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub init_meta {
+    ...
+    Moose::Util::apply_all_roles(
+        $args{for_class},
+        'BicylcePM::ORM::Role'
+    );
+    return $meta;
+}
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Monger;
+use BicyclePm::ORM ( table => 'monger' );
+
+has id => (
+   is        => 'ro',
+   isa       => 'Int',
+   traits    => ['OrmPrimaryKey'],
+);
+
+has name => (
+   is        => 'rw',
+   isa       => 'Str',
+   traits    => ['OrmColumn'],
+   required  => 1,
+);
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Monger;
+use BicyclePm::ORM ( table => 'monger' );
+
+primary_key id => (
+   isa       => 'Int'
+);
+
+column name => (
+   is        => 'rw',
+   isa       => 'Str',
+   required  => 1,
+);
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+package BicylcePm::ORM;
+
+use Moose qw();
+use Moose::Exporter;
+my ($IMPORT,$UNIMPORT) = Moose::Exporter->build_import_methods(
+    also                => [ 'Moose' ],
+    with_meta           => [ 'primary_key', 'column' ],
+    install             => [ 'unimport', 'init_meta' ],
+);
+
+sub primary_key {
+    my ($meta,$name,@args) = @_;
+    ...
+}
+</span>
+</code></pre>
+				</section>
+				<section>
+<pre><code data-trim data-noescape class="perl">
+sub primary_key {
+    my ($meta,$name,@args) = @_;
+    Moose->throw_error(q[Usage: primary_key 'name' => ( key => value, ... )])
+        if @rest % 2 == 1;
+
+    my %info;
+    my $meta_role = 'BicyclePm::ORM::Meta::Attribute::PrimaryKey';
+    @info{qw(package file line)} = caller(2);
+    my %attributes = ( definition_context => \%info, @args );
+    if ($name =~ m/^\+(.+)/) {
+        my $meta_attribute = $meta->find_attribute_by_name($1);
+        unless ($meta_attribute->does($meta_role)) {
+            $attributes{traits} ||= [];
+            push @{$attributes{traits}},$meta_role
+                unless 'PrimaryKey' ~~ $attributes{traits}
+                || $meta_role ~~ $attributes{traits};
+            }
+        }
+    }
+    $attributes{is} = 'ro';
+    $meta->add_attribute($attr, %attributes);
+    return;
+}
+</span>
+</code></pre>
+				</section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>    
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>
