@@ -13,15 +13,20 @@
                 <h2>The Art of Moose Meta Programming</h2>
                 </section>
 				<section>
-		        <ul>
+                <ul>
 				  <li><em>M</em>akes <em>O</em>bject <em>O</em>rientation <em>S</em>o <em>E</em>asy</li>
 				  <li class="fragment"><em>M</em>assive <em>O</em>bject-<em>O</em>riented <em>S</em>tacktrace <em>E</em>mitter</li>
 				  <li class="fragment"><em>M</em>oo, <em>O</em>nly <em>O</em>verengineered, <em>S</em>low, and <em>E</em>xecrable</li>
 				  <li class="fragment"><strong><em>M</em>eta <em>O</em>bject <em>O</em>rientation <em>S</em>yntax <em>E</em>xtensions</strong></li>
 				</ul>
                 </section>
+                <section>
+                    <h3>„An abstraction of a system of abstractions used to build abstractions“</h3>
+                </section>
 				<section>
+                <h3>Possibilities</h3>
 				<ul>
+                   <li>Introspection</li>
   				   <li>Create and alter classes on the fly (eg. Mock)</li>
 				   <li>Add/alter methods to/of a single object (traits)</li>
 				   <li>Syntax extensions (DSL)</li>
@@ -31,10 +36,18 @@
 				</ul>
 				</section>
 				<section>
+                <h3>Moose MOP</h3>
+				<ul>
+                   <li>Every class has an associated meta class instance</li>
+                   <li>Not only class but also attributes, methods, role, role application, type constraints, ...</li>
+                   <li>Inheritance Moose::Meta::Class -> Class::MOP::Class -> Class::MOP::Module -> Class::MOP::Package</li>
+                </ul>
+				</section>
+				<section>
 				<h3>Examples</h3>
 				<ul>
                    <li>Config file ORM + REST API</li>
-				   <li>MooseX-App</li><D-+>
+				   <li>MooseX-App</li>
 				   <li>Tagging attributes/classes</li>
 				</ul>
 				</section>
@@ -219,7 +232,7 @@ sub init_meta {
     ...
     Moose::Util::apply_all_roles(
         $args{for_class},
-        'BicylcePM::ORM::Role'
+        'BicylcePM::ORM::Role::Table'
     );
     return $meta;
 }
@@ -290,7 +303,7 @@ sub primary_key {
     my $meta_role = 'BicyclePm::ORM::Meta::Attribute::PrimaryKey';
     @info{qw(package file line)} = caller(2);
     my %attributes = ( definition_context => \%info, @args );
-    if ($name =~ m/^\+(.+)/) {
+    if ($name =~ m/^\+(.+)/) { # $name may be ArrayRef
         my $meta_attribute = $meta->find_attribute_by_name($1);
         unless ($meta_attribute->does($meta_role)) {
             $attributes{traits} ||= [];
@@ -301,12 +314,81 @@ sub primary_key {
         }
     }
     $attributes{is} = 'ro';
-    $meta->add_attribute($attr, %attributes);
+    $meta->add_attribute($name, %attributes);
     return;
 }
-</span>
 </code></pre>
 				</section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Tour;
+use BicyclePm::ORM ( table => 'tour' );
+
+primary_key id => (
+   isa          => 'Int'
+);
+
+column date => (
+   is           => 'rw',
+   isa          => 'DateTime',
+   orm_inflate  => sub {
+       my ($self,$raw) = @_;
+       return DateTime::Format::Pg->parse_datetime( $raw );
+   },
+   orm_deflate  => sub {
+       my ($self,$value) = @_;
+       return DateTime::Format::Pg->format_datetime( $value );
+   }
+);
+</code></pre>
+                </section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Meta::Attribute::Column;
+use Moose::Role;
+
+has 'orm_inflator' => (
+    is          => 'ro',
+    isa         => 'CodeRef',
+    predicate   => 'has_orm_inflator',
+);
+</code></pre>
+                </section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Role::Table;
+use Moose::Role;
+
+sub orm_load_by_pkey {
+    my ($class,$id) = @_;
+
+    my $meta = $class->meta;
+    my ($result) = $class->orm_query({
+        where => [ 
+            { field => $meta->orm_primary_key->name, value => $id, op => '=' },
+        ],
+    });
+    
+    my $constructor = {};
+    foreach my $key (keys %{$result}) {
+        my $attribute = $meta->find_attribute_by_name($key);
+        next
+            unless defined $attribute;
+        my $value = $result->{$key};
+        if ($attribute->has_orm_inflator) {
+            $value = $self->orm_inflator->($class,$value);
+        }
+        $constructor->{$key} = $value; 
+    }
+    
+    return $class->new($constructor);
+}
+</code></pre>
+                </section>
+
+                <section>
+                    <img src="http://homefries.com/wp-content/uploads/2012/06/AvtuNQwCEAAnawj.jpg">
+                </section>
             </div>
         </div>
         <script src="stuff/head.min.js"></script>    
