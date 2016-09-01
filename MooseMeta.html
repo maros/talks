@@ -215,15 +215,16 @@ sub init_meta {
 				</section>
 				<section>
 <pre><code data-trim data-noescape class="perl">
-package BicyclePm::ORM::Meta::Attribute::LateRequired {
-    use Moose::Role;
-};
+package BicyclePm::ORM::Meta::Attribute::LateRequired;
 
-package Moose::Meta::Attribute::Custom::Trait::LateRequired {
-    sub register_implementation {
-        return 'BicyclePm::ORM::Meta::Attribute::LateRequired';
-    }
-};
+use Moose::Role;
+Moose::Util::meta_attribute_alias('LateRequired');
+
+#package Moose::Meta::Attribute::Custom::Trait::LateRequired {
+#    sub register_implementation {
+#        return 'BicyclePm::ORM::Meta::Attribute::LateRequired';
+#    }
+#};
 </code></pre>
 				</section>
 				<section>
@@ -331,11 +332,11 @@ primary_key id => (
 column date => (
    is           => 'rw',
    isa          => 'DateTime',
-   orm_inflate  => sub {
+   orm_inflator => sub {
        my ($self,$raw) = @_;
        return DateTime::Format::Pg->parse_datetime( $raw );
    },
-   orm_deflate  => sub {
+   orm_deflator => sub {
        my ($self,$value) = @_;
        return DateTime::Format::Pg->format_datetime( $value );
    }
@@ -365,10 +366,24 @@ sub orm_load_by_pkey {
     my $meta = $class->meta;
     my ($result) = $class->orm_query({
         where => [ 
-            { field => $meta->orm_primary_key->name, value => $id, op => '=' },
+            { 
+                field   => $meta->orm_primary_key->name,
+                value   => $id,
+                op      => '='
+            },
         ],
     });
-    
+    ...    
+}
+</code></pre>
+                </section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Role::Table;
+use Moose::Role;
+
+sub orm_load_by_pkey {
+    ...
     my $constructor = {};
     foreach my $key (keys %{$result}) {
         my $attribute = $meta->find_attribute_by_name($key);
@@ -385,7 +400,50 @@ sub orm_load_by_pkey {
 }
 </code></pre>
                 </section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::DB::Bicycle;
+use BicyclePm::ORM ( table => 'bicycle' );
 
+primary_key id => (
+   isa          => 'Int'
+);
+
+column type => (
+   is           => 'ro'
+   isa          => 'Str'
+);
+
+belongs_to monger => (
+   orm_relation => 'BicyclePm::DB::Monger'
+);
+</code></pre>
+                </section>
+                <section>
+<pre><code data-trim data-noescape class="perl">
+package BicylcePm::ORM;
+
+sub belongs_to {
+    my ($meta,$name,@args) = @_;
+    ...
+    $attributes{orm_deflator} = \&_relation_deflate;
+    $attributes{orm_inflator} = \&_relation_inflate;
+    $attributes{is}           = 'rw';
+    $attributes{lazy_build}   = 1;
+    $meta->add_method($name.'_delete',...);
+    $meta->add_attribute($name, %attributes);
+}
+</code></pre>
+                </section>
+<pre><code data-trim data-noescape class="perl">
+package BicyclePm::ORM::Meta::Attribute::BelongsTo;
+
+after 'install_accessors' => sub {
+    my ($self) = @_;
+    ...
+};
+</code></pre>
+                </section>
                 <section>
                     <img src="http://homefries.com/wp-content/uploads/2012/06/AvtuNQwCEAAnawj.jpg">
                 </section>
