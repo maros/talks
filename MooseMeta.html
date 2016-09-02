@@ -12,6 +12,15 @@
                 <section>
                 <h2>The Art of Moose Meta Programming</h2>
                 </section>
+ 				<section>
+				<ul>
+				   <li>Maroš</li>
+                   <li>Vienna.pm, Bicycle.pm</li>
+                   <li>Geizhals</li>
+                   <li>@perlmaros</li>
+   				   <li>https://github.com/maros/talks</li>
+				</ul>
+				</section>
 				<section>
                 <ul>
 				  <li><em>M</em>akes <em>O</em>bject <em>O</em>rientation <em>S</em>o <em>E</em>asy</li>
@@ -435,11 +444,15 @@ sub belongs_to {
 }
 </code></pre>
                 </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 package BicyclePm::ORM::Meta::Attribute::BelongsTo;
 
+use Moose::Role;
 after 'install_accessors' => sub {
     my ($self) = @_;
+
+    $meta->add_method($name.'_delete',...);
     ...
 };
 </code></pre>
