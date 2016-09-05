@@ -4,14 +4,23 @@
         <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
         <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
         <link rel="stylesheet" href="stuff/override.css">
-		<meta charset="UTF-8">
+        <meta charset="UTF-8">
     </head>
     <body>
         <div class="reveal">
             <div class="slides">
                 <section>
                 <h2>Google Protocol Buffers</h2>
-				<h2 class="fragment"><span style="color:red">♥</span> Perl</h2>
+                <h2 class="fragment"><span style="color:red">♥</span> Perl</h2>
+                </section>
+                  <section>
+                <ul>
+                   <li>Maroš</li>
+                   <li>Vienna.pm, Bicycle.pm</li>
+                   <li>Geizhals</li>
+                   <li>@perlmaros</li>
+                      <li>https://github.com/maros/talks</li>
+                </ul>
                 </section>
                 <section data-transition="fade-out">
                 “Protocol buffers are Google's language-neutral, platform-neutral, extensible mechanism for serializing structured data – think XML, but smaller, faster, and simpler.”
@@ -20,38 +29,38 @@
                 “Protocol buffers are Google's language-neutral, platform-neutral, extensible mechanism for serializing structured data – think <strike style="color: red">XML</strike> JSON, but with enforced schema, and smaller <strike style="color: red">faster, and simpler</strike>.”
                 </section>
                 <section>
-				<h2>Key features</h2>
+                <h2>Key features</h2>
                 <p><ul>
-				   <li>Needs schema</li>
-				   <li>Binary serialisation</li>
-				   <li>Generates classes from schema</li>
-				   <li>Update schema without breaking code</li>
-				</ul></p>
+                   <li>Needs schema</li>
+                   <li>Binary serialisation</li>
+                   <li>Generates classes from schema</li>
+                   <li>Update schema without breaking code</li>
+                </ul></p>
                 </section>
-				<section>
-				<h3>Schema definition</h3>
-				<p><ul>
-				   <li>Scalars (float, int[32,64], bool, string, bytes)</li>
-				   <li>Objects (aka messages)</li>
-				   <li>Enums</li>
-				   <li>Hashes (aka maps)</li>
-				   <li>Arrays (aka repeated)</li>
-				</ul></p>
-				</section>
-				<section>
-				<h3>Schema definition</h3>
-				<p><ul>
-				   <li>required vs. optional</li>
-				   <li>default values</li>
-				   <li>alternative fields (aka oneof)</li>
-				   <li>Extensions</li>
-				   <li>Packages</li>
-				   <li>(RPC services)</li>
-				</ul></p>
-				</section>
+                <section>
+                <h3>Schema definition</h3>
+                <p><ul>
+                   <li>Scalars (float, int[32,64], bool, string, bytes)</li>
+                   <li>Objects (aka messages)</li>
+                   <li>Enums</li>
+                   <li>Hashes (aka maps)</li>
+                   <li>Arrays (aka repeated)</li>
+                </ul></p>
+                </section>
+                <section>
+                <h3>Schema definition</h3>
+                <p><ul>
+                   <li>required vs. optional</li>
+                   <li>default values</li>
+                   <li>alternative fields (aka oneof)</li>
+                   <li>Extensions</li>
+                   <li>Packages</li>
+                   <li>(RPC services)</li>
+                </ul></p>
+                </section>
 
-				<section>
-				<pre>
+                <section>
+                <pre>
 <code data-trim data-noescape class="protobuf">
 syntax = "proto2";
 package geizhals;
@@ -60,9 +69,9 @@ message ProductOffer {
   // definition goes here
 }
 </code></pre>
-				</section>
-				<section>
-				<pre>
+                </section>
+                <section>
+                <pre>
 <code data-trim data-noescape class="protobuf">
 enum CurrencyEnum {
     EUR = 0;
@@ -79,25 +88,26 @@ message Price {
     optional CurrencyEnum currency = 2 [default=EUR];
 }
 </code></pre>
-				</section>
-				<section>
-				<h3>Perl bindings</h3>
-				<ul>
-				   <li>Google::ProtocolBuffers</li>
-				   <li>protobuf-perl (not on CPAN)</li>
-				   <li>Google::ProtocolBuffers::Dynamic</li>
-				</ul>
-				</section>
-				<section>
-				<h3>Google::ProtocolBuffers::Dynamic</h3>
-				<ul>
-				   <li>Fast</li>
-				   <li>Uses libproto c++ library</li>
-				   <li>Introspection</li>
-				   <li class="fragment">Hard to install</li>
-				</ul>
-				</section>
-				<section>
+                </section>
+                <section>
+                <h3>Perl bindings</h3>
+                <ul>
+                   <li>Google::ProtocolBuffers</li>
+                   <li>protobuf-perl (not on CPAN)</li>
+                   <li>Google::ProtocolBuffers::Dynamic</li>
+                </ul>
+                </section>
+                <section>
+                <h3>Google::ProtocolBuffers::Dynamic</h3>
+                <ul>
+                   <li>Fast</li>
+                   <li>Uses libproto c++ library</li>
+                   <li>Introspection</li>
+                   <li>Mattia Barbon @ booking</li>
+                   <li class="fragment">Hard to install</li>
+                </ul>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 my $dynamic = Google::ProtocolBuffers::Dynamic->new();
 $dynamic->load_string("product_offer.proto","/opt/gh/proto");
@@ -107,8 +117,8 @@ $dynamic->map({
     explicit_defaults   => 0,
 });
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 my $offer = GH::Schema::ProductOffer->new();
 $offer->set_name('Cat End Pencil Sharpener');
@@ -116,8 +126,8 @@ $offer->encode(); <span class="fragment"># KABOOOM
 # Serialization failed: Missing required field 'geizhals.ProductOffer.price'
 </span>
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 $offer->set_price(GH::Schema::ProductOffer::Price->new(
     {
@@ -127,33 +137,33 @@ $offer->set_price(GH::Schema::ProductOffer::Price->new(
 ));
 $offer->encode(); <span class="fragment"># success!</span>
 </code></pre>
-				</section>
-				<section>
-				<ul>
-				   <li>Tedious to update (set_x, set_y, set_z)</li>
-				   <li>Tedious to create nested objects</li> 
-				   <li>Enums only by index or constant</li>
-				</ul>
-				</section>
-				<section>
-				<h3>Introspection to the rescue!</h3>
-				<ul>
-				   <li>Introspect classes on init</li>
-				   <li>Install helper methods (ie for enums)</li>
-				   <li>Wrap setter to handle enums by name</li>
-				   <li>Wrap setter to accept objects as hashrefs</li>
-				   <li>Add own methods to generated classes</li>
-				</ul>
-				</section>
-				<section>
+                </section>
+                <section>
+                <ul>
+                   <li>Tedious to update (set_x, set_y, set_z)</li>
+                   <li>Tedious to create nested objects</li> 
+                   <li>Enums only by index or constant</li>
+                </ul>
+                </section>
+                <section>
+                <h3>Introspection to the rescue!</h3>
+                <ul>
+                   <li>Introspect classes on init</li>
+                   <li>Install helper methods (ie for enums)</li>
+                   <li>Wrap setter to handle enums by name</li>
+                   <li>Wrap setter to accept objects as hashrefs</li>
+                   <li>Add own methods to generated classes</li>
+                </ul>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 my $md = GH::Schema::ProductOffer->message_descriptor();
 foreach my $fd (@{$md->fields}) {
     ...
 }
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 my $enum_type  = $fd->enum_type;
 my $name       = $fd->name;
@@ -169,8 +179,8 @@ if ($enum_type) {
     };
 }
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 my $enum_type  = $fd->enum_type;
 my $name       = $fd->name;
@@ -184,20 +194,20 @@ if ($enum_type) {
     }');
 }
 </code></pre>
-				</section>
-				<section>
-				<h3>Repeated fields</h3>
-				<ul>
-				   <li>adder</li>
-				   <li>list getter/setter</li>
-				   <li>element getter/setter by index</li>
-				</ul>
-				</section>
-				<section>
+                </section>
+                <section>
+                <h3>Repeated fields</h3>
+                <ul>
+                   <li>adder</li>
+                   <li>list getter/setter</li>
+                   <li>element getter/setter by index</li>
+                </ul>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
-my $mesage_type = $fd->message_type;
+my $message_type = $fd->message_type;
 if ($message_type) {
-    my $msg_package = _message_type_to_package($mesage_type);
+    my $msg_package = _message_type_to_package($message_type);
     *{$package.'::'.$setter} = sub {
         my ($self,$value) = @_;
         if (ref($value) eq 'HASH') {
@@ -207,8 +217,8 @@ if ($message_type) {
     };
 }
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 sub new_from_hashref {
     my ($class,$data) = @_;
@@ -221,8 +231,8 @@ sub new_from_hashref {
     return $class->new($built);
 }
 </code></pre>
-				</section>
-				<section>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="perl">
 sub _build_value {
     my ($fd,$value) = @_;
@@ -237,17 +247,17 @@ sub _build_value {
     }
 }
 </code></pre>
-				</section>
-				<section>
-				<h3>Maps</h3>
-				<ul>
-				   <li>Supported in protocol buffers v3</li>
-				   <li>Maps to hashes with arbitrary keys</li>
-				   <li>Hack to use maps in v2</li>
-				   <li>Internally strored as arrays of key/value pairs</li>
-				</ul>
-				</section>
-				<section>
+                </section>
+                <section>
+                <h3>Maps</h3>
+                <ul>
+                   <li>Supported in protocol buffers v3</li>
+                   <li>Maps to hashes with arbitrary keys</li>
+                   <li>Hack to use maps in v2</li>
+                   <li>Internally stored as arrays of key/value pairs</li>
+                </ul>
+                </section>
+                <section>
 <pre><code data-trim data-noescape class="protobuf">
 // v3
 map&lt;string, integer&gt; mymap = 7;
@@ -266,41 +276,41 @@ $dynamic->map_message(
    { implicit_maps => 1, package => 'geizhals' }
 );
 </code></pre>
-				</section>
-				<section>
-				<h3>Comparison Encoder 25k offers</h3>
+                </section>
+                <section>
+                <h3>Comparison Encoder 25k offers</h3>
                 <table style="color: white">
-				  <thead>
+                  <thead>
                     <tr>
                       <th>Format</th>
-					  <th>Runtime Real</th>
-					  <th>File size</th>
-					</tr>
-				  </thead>
-				  <tbody>
+                      <th>Runtime Real</th>
+                      <th>File size</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     <tr>
-					  <td>ProtoBuf</td>
-					  <td>0.49s</td>
-					  <td>42MB</td>
-				    </tr>
+                      <td>ProtoBuf</td>
+                      <td>0.49s</td>
+                      <td>42MB</td>
+                    </tr>
                     <tr>
-					  <td>Sereal</td>
-					  <td>0.34s</td>
-					  <td>42MB</td>
-				    </tr>
+                      <td>Sereal</td>
+                      <td>0.34s</td>
+                      <td>42MB</td>
+                    </tr>
                     <tr>
-					  <td>Cpanel::JSON::XS</td>
-					  <td>0.44s</td>
-					  <td>56MB</td>
-					</tr>
+                      <td>Cpanel::JSON::XS</td>
+                      <td>0.44s</td>
+                      <td>56MB</td>
+                    </tr>
                     <tr>
-					  <td>Cpanel::JSON::XS + JSON::TinyValidatorV4</td>
-					  <td>3.18s</td>
-					  <td>56MB</td>
-					</tr>
-				  </tbody>
-				</table>				
-				</section>
+                      <td>Cpanel::JSON::XS + JSON::TinyValidatorV4</td>
+                      <td>3.18s</td>
+                      <td>56MB</td>
+                    </tr>
+                  </tbody>
+                </table>                
+                </section>
                 <section>
                 <h3>Encoder</h3>
                 <pre>
