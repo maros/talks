@@ -1,0 +1,412 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+        <link rel="stylesheet" href="stuff/override.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Perl Basics</h2>
+                </section>
+                <section>
+                <ul>
+                    <li>TIMTOWTDI</li>
+                    <li class="fragment">TIMTOWTDIBSCINABTE</li>
+                    <li class="fragment">firts postmodern computer language</li>
+                    <li class="fragment">Perl != perl</li>
+                </ul>
+                </section>
+                <section>
+                    <h2>Datenstrukturen</h2>
+                </section>
+                <section>
+                    <h3>Strings</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">"hase"</span>
+<span class="fragment">"hase ist $what"</span>
+<span class="fragment">"hase ist ${what}"</span>
+<span class="fragment">'hase ist "super"'</span>
+<span class="fragment">q[hase ist super]</span>
+<span class="fragment">"hase ist \"super\"\n"</span>
+<span class="fragment">qq[hase ist sehr "$what"]</span>
+<span class="fragment">q{hase ist super}</span>
+<span class="fragment">"hase@geizhals.at" # !!!</span>
+<span class="fragment">&lt;&lt;BAERENBLOCK
+Hase ist sehr leiwand
+BAERENBLOCK</span>
+<span class="fragment">\N{LATIN SMALL LETTER A WITH DIAERESIS}
+\N{U+00E4}
+\xe4
+\x{00e4}
+\344</span></code></pre>
+                </section>
+                <section>
+                    <h3>Listen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">('hase','bär','fuchs')</span>
+<span class="fragment">qw(hase bär fuchs)</span>
+<span class="fragment">qw#hase bär fuchs#</span>
+<span class="fragment">('hase',('bär','fuchs'),('luchs'))</span>
+<span class="fragment">(1..10,'A'..'Z')</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Sigils</h3>
+                    <ul>
+                        <li>$ Scalar</li>
+                        <li class="fragment">%hash</li>
+                        <li class="fragment">@array</li>
+                        <li class="fragment">&subroutine</li>
+                        <li class="fragment">*typeglob</li>
+                        <li class="fragment">($reference)</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>%hash</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">my %hash = ( hase => 'value', bär => ...);</span>
+<span class="fragment">$hash{key}</span>
+<span class="fragment">$hash{$somevar}</span>
+<span class="fragment">keys %hash</span>
+<span class="fragment">values %hash</span>
+<span class="fragment">delete $hash{fuchs}</span>
+<span class="fragment">exists $hash{fuchs}</span>
+<span class="fragment">@hash{'hase','bär','fuchs'}</span>
+<span class="fragment">%hash{'hase','bär','fuchs'}</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Hash Referenzen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">$hashref = { tier => 'bär' }</span>
+<span class="fragment">$hashref = \%hash</span>
+<span class="fragment">$hashref->{tier}</span>
+<span class="fragment">$hashref->{fell}{farbe}</span>
+<span class="fragment">keys %{$hashref}</span>
+<span class="fragment">keys %$hashref</span>
+<span class="fragment">@{$hashref}{'hase','luchs'}</span>
+<span class="fragment">@$hashref{qw(hase luchs)}</span></code></pre>
+                </section>
+                <section>
+                    <h3>@array</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">my @array = ('hase', 'bär', 'marder');</span>
+<span class="fragment">$array[1]</span>
+<span class="fragment">$array[-1]</span>
+<span class="fragment">$array[0,1,6]</span>
+<span class="fragment">$array[0..3]</span>
+<span class="fragment">$#array</span>
+<span class="fragment">scalar @array</span>
+<span class="fragment">pop,push,shift,unshift,slice @array</span></code></pre>
+                </section>
+                <section>
+                    <h3>Array Referenzen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">$arrayref = [ 'bär', 'fuchs' ]</span>
+<span class="fragment">$arrayref = \@array</span>
+<span class="fragment">$arrayref->[1]</span>
+<span class="fragment">@{$arrayref}</span>
+<span class="fragment">@$arrayref</span>
+<span class="fragment">$#$arrayref</span></code></pre>
+                </section>
+                <section>
+                    <h3>Nested</h3>
+                    <pre><code data-trim data-noescape class="perl">
+my $zoo = {
+    bär     => {
+        family => 'Ursidae',
+        name => 'Meister Petz',
+    },
+    hase    => {
+        family => 'Lagomorpha',
+        name => 'Meister Lampe',
+    },
+};
+say $zoo->{bär}->{family};
+say $zoo->{bär}{family};
+</code></pre>
+                </section>
+                <section>
+                    <h3>Variablen & Scope</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">my $tier</span>
+<span class="fragment">{ my $tier = 'bärchen'; ... } say $tier # !!!</span>
+<span class="fragment">my ($tier,$vieh,$tierchen)</span>
+<span class="fragment">my $tier = 'hase';</span>
+<span class="fragment">my ($tier,$viecherl) = ('bär','maus');</span>
+<span class="fragment">our $tier</span>
+<span class="fragment">state $tier = 'haserl';</span>
+<span class="fragment">local $tier</span>
+<span class="fragment">use Const::Fast;
+const my $tier =&gt; 'bärli';</span></code></pre>
+                </section>
+                <section>
+                    <h3>Definedness</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">my $tier;
+say "$tier is toll"; # Use of uninitialized value $tier in concatenation</span>
+<span class="fragment">say "$tier is toll"
+    if defined $tier;</span>
+<span class="fragment">$tier //= 'fallbackbär';</span>
+<span class="fragment">$tier ||= 'fallbackhase';</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Kontext 1</h3>
+                    <ul>
+                        <li class="fragment">Scalar</li>
+                        <li class="fragment">List</li>
+                        <li class="fragment">(Boolean)</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Kontext 2</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">say @list</span>
+<span class="fragment">say "Liste: @list";</span>
+<span class="fragment">my ($x) = @list;</span>
+<span class="fragment">if (@list) { ... }</span>
+<span class="fragment">if ($value) { ... }</span>
+<span class="fragment">say @list;</span>
+<span class="fragment">say scalar @list;</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h2>Funktionen</h2>
+                </section>
+                <section>
+                    <h3>Funktionen Aufrufen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">tier()</span>
+<span class="fragment">&tier()</span>
+<span class="fragment">&tier</span>
+<span class="fragment">tier</span>
+<span class="fragment">Full::Package::Name::tier()</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Funktionen Definieren</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">sub tier { ... }</span>
+<span class="fragment">@_</span>
+<span class="fragment">tier( baer => 'super', hase => 'toll', @andere)</span>
+<span class="fragment">my (%zoo) = @_;</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Objektorientiert</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">GH::Hase->eat($futter);</span>
+<span class="fragment">$object->eat($futter);</span>
+<span class="fragment">my ($self,$futter) = @_;</span>
+<span class="fragment">my $hase = GH::Hase->new(...);</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <h2>Regular Expressions</h2>
+                </section>
+                <section>
+                    <h3>Operatoren</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">$tier =~ m/^[fl]uchs$/;</span>
+<span class="fragment">$tier !~ m/^[fl]uchs$/;</span>
+<span class="fragment">$tier =~ /^[fl]uchs$/;</span>
+<span class="fragment">m/h+/</span>
+<span class="fragment">s/a+/ä/</span>
+<span class="fragment">tr/ÄËÏÖÜ/AEIOU/</span>
+<span class="fragment">$re = qr/(hase|b(ae|ä)r)/i</span>
+<span class="fragment">$tier =~ m{[fl]uchs};</span></code/></pre>
+                </section>
+                <section>
+                    <h3>Modifier</h3>
+                    <ul>
+                        <li class="fragment">m/.../six</li>
+                        <li class="fragment">i</li>
+                        <li class="fragment">x</li>
+                        <li class="fragment">s oder m</li>
+                        <li class="fragment">g</li>
+                        <li class="fragment">e (nur für s///)</li>
+                        <li class="fragment">r (nur für s///)</li>
+                        <li class="fragment">(?i:re...)</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Quantifier</h3>
+                    <ul>
+                        <li class="fragment">+</li>
+                        <li class="fragment">*</li>
+                        <li class="fragment">?</li>
+                        <li class="fragment">{3}</li>
+                        <li class="fragment">{3,10}</li>
+                        <li class="fragment">{,10}</li>
+                        <li class="fragment">{3,}</li>
+                        <li class="fragment">+?</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Rückgabewerte</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">join ";",($tier =~ m/\w/);</span>
+<span class="fragment">join ";",($tier =~ m/\w/g);</span>
+<span class="fragment">join ";",($tier =~ s/\w/_/);</span>
+<span class="fragment">join ";",($tier =~ s/\w/_/g);</span>
+<span class="fragment">join ";",($tier =~ s/\w/_/gr);</span></code></pre>
+                </section>
+                <section>
+                    <h3>.* oder .+</h3>
+                    <img src="https://i.stack.imgur.com/eXKFh.png"/>
+                </section>
+                <section>
+                    <img src="https://i.stack.imgur.com/6IoyS.png"/>
+                </section>
+                <section>
+                    <h3>Captures</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">if ($tier =~ m/^mein lieblingstier ist ein (bär|hase)$/i) {
+    my $fav = $1;
+}</span>
+<span class="fragment">s/mein lieblingstier ist ein (bär|hase)/ich liebe $1en/</span>
+<span class="fragment">if ($tier =~ m/(?&lt;farbe&gt;rot|grün)er\s+(?&lt;was&gt;panda|frosch)/) {
+    say "der $+{was} ist $+{farbe}";
+}</span>
+<span class="fragment">m/roter (?:bär|stern) (beograd|wien)/</span></code></pre>
+                </section>
+                <section>
+                    <h3>Zeichenklassen </h3>
+                    <ul>
+                        <li class="fragment">\s</li>
+                        <li class="fragment">\b, \B</li>
+                        <li class="fragment">\w, \W</li>
+                        <li class="fragment">\A, \Z, ^, $</li>
+                        <li class="fragment">[a-zA-Z0-9]</li>
+                        <li class="fragment">[^a-z]</li>
+                        <li class="fragment">[[:punct:][:space:]]</li>
+                        <li class="fragment">[\p{Latin}\p{Digit}]</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Sonstiges</h2>
+                </section>
+                <section>
+                    <h3>Kontrollstrukturen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">if ($tier eq 'hase') { ... }</span>
+<span class="fragment">unless ($tier eq 'bär') { ... }</span>
+<span class="fragment">$tier = 'hase'
+    if $tier eq 'kannickel';</span>
+<span class="fragment">foreach my $tier (@tiere) { ... }</span>
+<span class="fragment">while (scalar @tiere) { ... }</span>
+<span class="fragment">last/next</span>
+<span class="fragment">LABEL: foreach my $tier (@tiere) { ... }</span>
+<span class="fragment">last LABEL/next LABEL</span>
+<span class="fragment">say $tier ? 'ein tier!':'kein tier?';</span></code></pre>
+                </section>
+                <section>
+                    <h3>map/grep/sort</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">@grosse_tiere = map { uc($_) } @tiere;</span>
+<span class="fragment">@alle_tiere = grep { defined($_) } @tiere;</span>
+<span class="fragment">sort { $b cmp $a } map { uc($_) } grep { defined($_) } @tiere;</span>
+<span class="fragment">map { (uc($_),lc($_)) } @tiere;</span></code></pre>
+                    <ul class="fragment">
+                        <li>use List::Util qw(...);</li>
+                        <li>first</li>
+                        <li>any/all/none</li>
+                        <li>reduce</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Fehlerbehandlung</h3>
+                    <pre><code data-trim data-noescape class="perl">use Try::Tiny;
+try {
+    ...
+} catch {
+    say "Died with $_";
+} finally {
+    # cleanup
+}; #!!!</code></pre>
+                </section>
+                <section>
+                    <h3>Pragmas</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">use strict;
+use warnings;
+use 5.0X0;</span>
+<span class="fragment">use GH::Init qw($log);</span></code></pre>
+                </section>
+                <section>
+                    <h3>Spezialvariablen</h3>
+                    <ul>
+                        <li class="fragment">$_</li>
+                        <li class="fragment">$a, $b</li>
+                        <li class="fragment"><pre><code data-trim data-noescape class="perl">my $upper = uc;</code></pre></li>
+                        <li class="fragment">@_</li>
+                        <li class="fragment">%ENV</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Closures</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">my $superify = sub { $_[0].' is super!' };</span>
+<span class="fragment">$superify->('hase');</span>
+<span class="fragment">my $tier = 'hase';
+my $superviecherl = sub { say "$tier is super!" };
+...
+$superviecherl->();</span></code></pre>
+                </section>
+                <section>
+                    <h3>Debugging</h3>
+                    <pre><code data-trim data-noescape class="perl">
+<span class="fragment">warn "Ein $tier ist entflogen"</span>
+<span class="fragment">use GH::Init qw($log);
+$log->warnf('Ein %s ist entflogen',$tier);</span>
+<span class="fragment">perl -D whatever.pl</span>
+<span class="fragment">use GH::Dumper;
+say STDERR dump($reference);</span></code></pre>
+<ul class="fragment">
+    <li>DBI_QUERYLOG=1</li>
+    <li>LOG_LEVEL=debug</li>
+    <li>GH_LOGGER_OUTPUT=STDERR</li>
+</ul>
+                </section>
+                <section>
+                    <h3>Klassen</h3>
+                    <pre><code data-trim data-noescape class="perl">
+package GH::Zoo::Tier;
+use Moose;
+with qw(GH::Role::Whatever GH::Role::MutexProcess);
+has 'name' => ( is => 'ro', required => 1, );
+has 'weight_in_g' => ( is => 'rw', isa => 'Int', );
+has 'sound' => ( is => 'rw', predicate => 'has_sound' );
+sub make_sound {
+    my ($self) = @_;
+    return
+        unless $self->has_sound;
+    return 'Der '.$self->name.' macht '.$self->sound;
+}
+
+my $bb = GH::Zoo::Tier->new(
+    name => 'Braunbär',
+    sound => 'Rawwwr'
+);
+say $bb->make_sound;
+</code></pre>
+                </section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>
