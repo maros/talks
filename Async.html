@@ -1,0 +1,195 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+        <link rel="stylesheet" href="stuff/override.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <p><h3 class="fragment">Sequential</h3></p>
+                    <pre><code data-trim data-noescape class="pl">
+foreach my $a_id (@articles) {
+    my $response = $ua-&gt;get('http://gh.de/'.$a_id);
+    ...
+}
+                    </code></pre>
+                </section>
+                <section>
+                    <p><h3>Parallel</h3></p>
+                    <ul>
+                        <li class="fragment">forking/threading/worker queues</li>
+                        <li class="fragment">Sharing data can be hard</li>
+                        <li class="fragment">Overhead eg. for forking</li>
+                    </ul>
+                </section>
+                <section>
+                    <p><h2>Asynchronous</h2>
+                    <ul>
+                        <li class="fragment">Non-blocking</li>
+                        <li class="fragment">Event loop to manage tasks</li>
+                        <li class="fragment">Control flow via callbacks</li>
+                    </ul>
+                </section>
+                <section>
+                <h3>AnyEvent</h3>
+                <ul>
+                    <li>DBI of event loop programming</li>
+                    <li>Signal watchers</li>
+                    <li>Timer (delay/interval)</li>
+                    <li>I/O watchers</li>
+                    <li>Child process watchers</li>
+                </ul>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use AnyEvent;
+my $c = AnyEvent-&gt;condvar;
+my $w = AnyEvent-&gt;timer(after =&gt; 10, cb =&gt; sub { $c-&gt;send });
+$c-&gt;recv;
+say "ok";
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+my $main = AnyEvent-&gt;condvar;
+my $cleanup = AnyEvent-&gt;condvar;
+my $sigint = AnyEvent-&gt;signal(
+    signal =&gt; 'INT',
+    cb =&gt; sub { $main-&gt;send(); }
+);
+$main-&gt;recv;
+# Do the cleanup ... then $cleanup-&gt;send();
+$cleanup-&gt;recv;
+                    </code></pre>
+                </section>
+                <section>
+                <ul>
+                    <li>Twiggy::Server</li>
+                    <li>AnyEvent::HTTP</li>
+                    <li>AnyEvent::RipeRedis</li>
+                    <li>AnyEvent::Memcached</li>
+                    <li>AnyEvent::DBI</li>
+                </ul>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use AnyEvent::HTTP qw(http_request);
+http_request "GET", $uri,
+    headers =&gt; $headers,
+    sub {
+        my ($body, $header) = @_;
+        ...
+    };
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+$redis-&gt;get( $key, sub {
+    my ($reply, $error) = @_;
+    if ( defined $err ) {
+        ...
+    }
+    ...
+});
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+$redis-&gt;psubscribe(qw(INC:* API:*), sub {
+    my ($msg, $pattern, $channel) = @_;
+    ...
+});
+                    </code></pre>
+                </section>
+                <section>
+                    <h3>Callback hell</h3>
+                    <h3 class="fragment">Promises to the rescue</h3>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use Promises qw(deferred), backend =&gt; ['AnyEvent'];
+my $deferred = deferred();
+start_async_stuff($deferred);
+return $defered-&gt;promise;
+                    </code></pre>
+                    <pre class="fragment"><code data-trim data-noescape class="pl">
+# on async stuff finish
+if ($success) {
+    $deferred-&gt;resolve($payload);
+} else {
+    $deferred-&gt;reject($error);
+}
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+$promise-&gt;then(
+    sub {
+        my ($payload) = @_;
+        ...;
+        <span class="fragment">my $d = deferred();
+        ...;
+        return $d-&gt;promise;</span>
+    },
+    sub { my ($error) = @_; ... },
+)<span class="fragment">
+-&gt;then(
+    sub { my ($payload) = @_; ...; },
+    sub { my ($error) = @_; ...; },
+);
+</span>
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+collect(
+    $promise1,
+    $promise2,
+    $promise3
+)-&gt;then(
+    sub {
+        my ($payload1, $payload2, $payload3) = @_;
+        ...
+        $cv-&gt;send();
+    },
+    sub {
+        $cv-$gt;croak( GH::X-&gt;new( message =&gt; 'failed' ) );
+    }
+);
+                    </code></pre>
+                </section>
+                <section>
+                    <ul>
+                        <li>finally</li>
+                        <li>timeout</li>
+                        <li>is_(in_progress|resolved|rejected|done|failed|...)</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Future</h3>
+                </section>
+                <section>
+                    <ul>
+                        <li>repeat/try_repeat_until_success/try_repeat-while/then-else/followed_by</li>
+                        <li>await</li>
+                        <li>same object for consumer/producer</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>

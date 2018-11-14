@@ -1,0 +1,163 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="stuff/reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="stuff/reveal.js/css/theme/league.css">
+        <link rel="stylesheet" href="stuff/highlight/styles/railscasts.css">
+        <link rel="stylesheet" href="stuff/override.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <p><h3 class="fragment">Sequential</h3></p>
+                    <pre><code data-trim data-noescape class="pl">
+foreach my $a_id (@articles) {
+    my $response = $ua-&gt;get('http://gh.de/'.$a_id);
+    ...
+}
+                    </code></pre>
+                </section>
+                <section>
+                    <p><h3>Parallel</h3></p>
+                    <ul>
+                        <li class="fragment">forking/threading/worker queues</li>
+                        <li class="fragment">Sharing data can be hard</li>
+                        <li class="fragment">Overhead eg. for forking</li>
+                    </ul>
+                </section>
+                <section>
+                    <p><h2>Asynchronous</h2>
+                    <ul>
+                        <li class="fragment">Non-blocking</li>
+                        <li class="fragment">Event loop to manage tasks</li>
+                        <li class="fragment">Control flow via callbacks/promises/futures</li>
+                    </ul>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use Moose;
+with qw(GH::Role::EventLoop);
+sub process {
+    my ($self) = @_;
+    my $timer1 = AnyEvent->timer(
+        ...
+    );
+    ...
+    return ($timer1,$timer2,$watcher1,...); # Important!
+}
+                    </code></pre>
+                </section>
+                <section>
+                    <ul>
+                        <li>Handles SIGINT</li>
+                        <li><code data-trim data-noescape class="pl">$self->exit_loop</code></li>
+                        <li>Optional cleanup method</li>
+                    </ul>
+                    <pre><code data-trim data-noescape class="pl">
+sub cleanup {
+    my ($self) = @_;
+    my $d = deferred();
+    ... # do cleanup
+    return $d->promise;
+}
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+sub some_async_method {
+    my $d = defered();
+    # Do something that takes long
+    # on success sub { $d->resolve($content) }
+    # on failure sub { $d->reject($error) }
+    return $d->promise();
+}
+
+some_async_method()->then(
+    sub { # success },
+    sub { # failure }
+)->finally(sub { # cleanup });
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use GH::Promises qw(:all);
+my @promises;
+my $d = defered();
+push @promises, $d->promise();
+push @promises, some_method_returning_a_promise();
+push @promises, promise_resolved('OK!');
+push @promises, promise_rejected('Failed!');
+my @return = promise_wait(@promises);
+                    </code></pre>
+                </section>
+                <section>
+                <ul>
+                    <li>Twiggy::Server</li>
+                    <li>AnyEvent::RipeRedis</li>
+                    <li>AnyEvent::Memcached</li>
+                    <li>AnyEvent::HTTP</li>
+                    <li>Mojo (via EV)</li>
+                    <li>Geizhals::Importer::Grabber</li>
+                    <li>GH::DBI::Async</li>
+                </ul>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use Geizhals::Importer::Grabber::Mojo;
+my $mojo = Geizhals::Importer::Grabber::Mojo->new();
+# blocking version
+my $file = $mojo->get_file('https://...', header ...);
+# with cache, retry
+my $promise1 = $mojo->get_file_promise('https://...');
+# no cache, retry
+my $promise2 = $mojo->download_file_retry('https://...');
+# no cache, no retry
+my $promise3 = $mojo->download_file('https://...');
+                    </code></pre>
+                </section>
+                <section>
+                    <ul>
+                        <li>Mojo, CurlHttp, CurlFtp, Local (TSV)</li>
+                        <li>Manage grabbers via Geizhals::Importer::Grabber::Manager</li>
+                        <li>Returns Geizhals::Importer::Grabber::Content</li>
+                    </ul>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+my (@unpacked) = $content->unpack();
+$unpacked[0]->mime;
+$unpacked[0]->name;
+$unpacked[0]->encoding; # if available
+$unpacked[0]->fh;
+...
+                    </code></pre>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape class="pl">
+use GH::DBI::Async;
+$dbh->async->run(
+    'SELECT * FROM baer WHERE id = ?',
+    $id
+)->then(
+    sub {
+        my ($sth) = @_;
+        ...
+    }
+);
+                    </code></pre>
+                </section>
+            </div>
+        </div>
+        <script src="stuff/head.min.js"></script>
+        <script src="stuff/reveal.js/js/reveal.js"></script>
+        <script>
+            Reveal.initialize({
+                    progress: true,
+                    dependencies: [
+                        { src: 'stuff/reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                        { src: 'stuff/reveal.js/plugin/notes/notes.js', async: true }
+                    ]
+            });
+        </script>
+    </body>
+</html>
